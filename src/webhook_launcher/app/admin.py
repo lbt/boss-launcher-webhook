@@ -83,6 +83,19 @@ class WebHookMappingAdmin(admin.ModelAdmin):
 
         return super(WebHookMappingAdmin, self).save_form(request, form, change)
 
+    # HACK: When creating similar webhook inline model is not saved.
+    # this is probably not correct place to fix the issue but works
+    # non the less.
+    def save_related(self, request, form, formsets, change):
+        super(WebHookMappingAdmin, self).save_related(request, form, formsets, change)
+        instance = form.instance
+        if not instance.lastseenrevision_set.count():
+            rev = request.POST.get('lastseenrevision_set-0-revision', None)
+            tag = request.POST.get('lastseenrevision_set-0-tag', None)
+            if rev or tag:
+                LastSeenRevision.objects.create(mapping=instance,
+                                                revision = rev, tag = tag)
+
     def response_change(self, request, obj):
         if "_triggerbuild" in request.POST:
             opts = obj._meta
