@@ -105,14 +105,20 @@ class Payload(object):
                     func = self.bitbucket_webhook_launch
             elif repo.get('url', None):
                 # github type payload
-                url = repo.get('url', None)
+                # Try the gitlab cannonical http url first:
+                url = repo.get('git_http_url', None)
+                if not url:
+                    url = repo.get('url', None)
                 if url:
-                    print "github payload"
+                    print "github/gitlab payload"
                     if not url.endswith(".git"):
                         url = url + ".git"
                     func = self.github_webhook_launch
 
         self.url = url
+        # Some hooks use the sshurl rather than the https.
+        self.sshurl = repo.get('git_ssh_url', None)
+
 
         if func is None:
             self.handle = self.noop
@@ -202,14 +208,14 @@ class Payload(object):
         else:
             print "Couldn't use payload"
             return
-
-        print repourl
-        print branches
+        print "Url is %s or maybe %s" % (repourl, self.sshurl)
+        print "Branches %s" % branches
         mapobj = None
-        mapobjs = WebHookMapping.objects.filter(repourl=repourl)
+        # Look for mappings based on either the canonical url or the ssh one
+        mapobjs = WebHookMapping.objects.filter(repourl__in = [u for u in [repourl, self.sshurl] if u is not None])
         if branches:
             mapobjs = mapobjs.filter(branch__in=branches)
-        print mapobjs
+        print "Mappings: %s" % mapobjs
 
         zerosha = '0000000000000000000000000000000000000000'
         # action
@@ -334,15 +340,15 @@ class Payload(object):
 
     def relay(self, relays=None):
 
-
         if not self.url:
+            print "Trying to relay but Payload has no url, skipping"
             return
 
         parsed_url = urlparse.urlparse(self.url)
-        official_projects = set(prj.name for prj in Project.objects.filter(official=True, allowed=True))
-        official_packages = set(mapobj.package for mapobj in 
+        official_projects = list(set(prj.name for prj in Project.objects.filter(official=True, allowed=True)))
+        official_packages = list(set(mapobj.package for mapobj in 
                                 WebHookMapping.objects.filter(repourl=self.url,
-                                project__in=official_projects).exclude(package=""))
+                                project__in=official_projects).exclude(package="")))
 
         service_path = os.path.dirname(parsed_url.path)
         if not relays:
@@ -350,6 +356,7 @@ class Payload(object):
                                     sources__path=service_path,
                                     sources__service__netloc=parsed_url.netloc))
             if not relays:
+                print "This event's netloc path (%s %s) is not in any Relay Target" % (parsed_url.netloc, service_path)
                 return
 
         headers = {'content-type': 'application/json'}
