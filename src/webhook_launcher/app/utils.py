@@ -103,17 +103,20 @@ class Payload(object):
                     if not url.endswith(".git"):
                         url = url + ".git"
                     func = self.bitbucket_webhook_launch
-            elif repo.get('url', None):
+            else:
                 # github type payload
                 # Try the gitlab cannonical http url first:
                 url = repo.get('git_http_url', None)
-                if not url:
+                if not url: # then try the standard url:
                     url = repo.get('url', None)
                 if url:
                     print "github/gitlab payload"
                     if not url.endswith(".git"):
                         url = url + ".git"
                     func = self.github_webhook_launch
+
+        if not url:
+            raise Exception("Could not locate a url in the payload\n%s" % data)
 
         self.url = url
         # Some hooks use the sshurl rather than the https.
