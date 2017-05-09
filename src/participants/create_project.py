@@ -104,7 +104,11 @@ class ParticipantHandler(BuildServiceParticipant):
                 repolinks[repo].append(arch)
             if not repolinks[repo]:
                 del repolinks[repo]
-        return repolinks
+        if repolinks:
+            return repolinks
+        else:
+            # Creating a project with no repos makes no sense
+            raise RuntimeError("No suitable repos found in %s (must contain an arch in the name)" % project)
 
     @BuildServiceParticipant.setup_obs
     def handle_wi(self, wid):
