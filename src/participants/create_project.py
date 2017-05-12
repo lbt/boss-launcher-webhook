@@ -119,7 +119,7 @@ class ParticipantHandler(BuildServiceParticipant):
 
         project = p.project or f.project
         package = p.package or f.package
-        maintainers = ["cibot"]
+        maintainers = self.obs.getUserName()
         linked_projects = []
         repos = []
         paths = []
