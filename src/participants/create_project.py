@@ -184,7 +184,7 @@ class ParticipantHandler(BuildServiceParticipant):
 
         if create:
             result = self.obs.createProject(project, repolinks, desc=desc, title=summary, mechanism=mechanism,
-                                            linked_projects=linked_projects, maintainers=maintainers, build=build, block=block)
+                                            links=linked_projects, maintainers=maintainers, build=build, block=block)
 
             if not result:
                 raise RuntimeError("Something went wrong while creating project %s" % project)
